@@ -1,0 +1,31 @@
+name: SOCIMI BORME Watcher
+
+on:
+  schedule:
+    # L-V a las 06:35 UTC ≈ 08:35 Europe/Madrid
+    - cron: "35 6 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          python socimi_borme_pipeline.py run
+          python socimi_borme_pipeline.py export
+      - name: Commit DB & CSV
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "[email protected]"
+          git add socimi_borme.db socimi_borme.csv
+          git commit -m "Update SOCIMI DB $(date -u +'%Y-%m-%d')" || echo "No changes"
+          git push

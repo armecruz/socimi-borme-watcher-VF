@@ -168,16 +168,21 @@ def process_date(fecha: dt.date, conn: sqlite3.Connection) -> int:
     return count
 
 def cmd_run(_):
+    # Define ventana de 12 meses hasta hoy (zona Europe/Madrid)
     tz_madrid = tz.gettz("Europe/Madrid")
     today = dt.datetime.now(tz=tz_madrid).date()
-    fecha = today
-    if today.weekday() >= 5:  # fin de semana → usar viernes
-        delta = today.weekday() - 4
-        fecha = today - dt.timedelta(days=delta)
+    start = today - relativedelta(months=12)
+    total = 0
     with sqlite3.connect(DB_FILE) as conn:
         ensure_db(conn)
-        num = process_date(fecha, conn)
-        print(f"Procesados {num} anuncios SOCIMI el {fecha}.")
+        for d in daterange(start, today):
+            try:
+                total += process_date(d, conn)
+                time.sleep(0.4)  # cortesía con el servidor
+            except Exception as e:
+                print(f"Error en {d}: {e}", file=sys.stderr)
+    print(f"Procesado ventana 12 meses: {start} → {today}. Nuevos eventos: {total}")
+
 
 def daterange(d1: dt.date, d2: dt.date):
     step = dt.timedelta(days=1)
